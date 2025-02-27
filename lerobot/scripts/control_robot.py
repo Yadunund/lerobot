@@ -370,18 +370,24 @@ def control_robot(cfg: ControlPipelineConfig):
 
     robot = make_robot_from_config(cfg.robot)
 
-    if isinstance(cfg.control, CalibrateControlConfig):
-        calibrate(robot, cfg.control)
-    elif isinstance(cfg.control, TeleoperateControlConfig):
-        teleoperate(robot, cfg.control)
-    elif isinstance(cfg.control, RecordControlConfig):
-        record(robot, cfg.control)
-    elif isinstance(cfg.control, ReplayControlConfig):
-        replay(robot, cfg.control)
-    elif isinstance(cfg.control, RemoteRobotConfig):
-        from lerobot.common.robot_devices.robots.lekiwi_remote import run_lekiwi
+    try:
+        if isinstance(cfg.control, CalibrateControlConfig):
+            calibrate(robot, cfg.control)
+        elif isinstance(cfg.control, TeleoperateControlConfig):
+            teleoperate(robot, cfg.control)
+        elif isinstance(cfg.control, RecordControlConfig):
+            record(robot, cfg.control)
+        elif isinstance(cfg.control, ReplayControlConfig):
+            replay(robot, cfg.control)
+        elif isinstance(cfg.control, RemoteRobotConfig):
+            from lerobot.common.robot_devices.robots.lekiwi_remote import run_lekiwi
 
-        run_lekiwi(cfg.robot)
+            run_lekiwi(cfg.robot)
+    except KeyboardInterrupt:
+        pass
+    except ValueError as e:
+        print(f"Error: {e}")
+        pass
 
     if robot.is_connected:
         # Disconnect manually to avoid a "Core dump" during process
