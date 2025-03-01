@@ -243,6 +243,7 @@ def control_loop(
 
     timestamp = 0
     start_episode_t = time.perf_counter()
+    image_windows_created : bool = False
     while timestamp < control_time_s:
         start_loop_t = time.perf_counter()
 
@@ -265,10 +266,17 @@ def control_loop(
             dataset.add_frame(frame)
 
         if display_cameras and not is_headless():
+            print("Attempting to show camera image")
             image_keys = [key for key in observation if "image" in key]
             for key in image_keys:
-                cv2.imshow(key, cv2.cvtColor(observation[key].numpy(), cv2.COLOR_RGB2BGR))
-            cv2.waitKey(1)
+                if not image_windows_created:
+                    # cv2.namedWindow(key)
+                    cv2.waitKey(1)
+                print("Calling imshow")
+                # cv2.imshow(key, cv2.cvtColor(observation[key].numpy(), cv2.COLOR_RGB2BGR))
+                print("Done calling imshow")
+                cv2.waitKey(1)
+            image_windows_created = True
 
         if fps is not None:
             dt_s = time.perf_counter() - start_loop_t

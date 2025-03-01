@@ -22,6 +22,7 @@ from lerobot.common.robot_devices.cameras.configs import (
     CameraConfig,
     IntelRealSenseCameraConfig,
     OpenCVCameraConfig,
+    ROS2CameraConfig,
 )
 from lerobot.common.robot_devices.motors.configs import (
     DynamixelMotorsBusConfig,
@@ -483,8 +484,8 @@ class So100RobotConfig(ManipulatorRobotConfig):
             #     width=640,
             #     height=480,
             #     use_depth=True),
-            "phone": OpenCVCameraConfig(
-                camera_index=4,
+            "camera": ROS2CameraConfig(
+                topic="/camera/camera/color/image_raw",
                 fps=30,
                 width=640,
                 height=480,
