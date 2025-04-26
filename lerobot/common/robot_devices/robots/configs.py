@@ -485,7 +485,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
             #     height=480,
             #     use_depth=True),
             "camera": ROS2CameraConfig(
-                topic="/camera/camera/color/image_raw",
+                topic="/camera/color/image_raw",
                 fps=30,
                 width=640,
                 height=480,
