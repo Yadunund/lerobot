@@ -477,18 +477,34 @@ class So100RobotConfig(ManipulatorRobotConfig):
 
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
-            # "rs1": IntelRealSenseCameraConfig(
-            #     name=None,
-            #     serial_number=int(46322251499),
-            #     fps=30,
-            #     width=640,
-            #     height=480,
-            #     use_depth=True),
-            "camera": ROS2CameraConfig(
-                topic="/camera/color/image_raw",
+            "rs_camera_color": ROS2CameraConfig(
+                topic="/rs/color/image_raw",
                 fps=30,
                 width=640,
                 height=480,
+                channels=3,
+            ),
+            "rs_camera_depth": ROS2CameraConfig(
+                topic="/rs/depth/image_rect_raw",
+                fps=30,
+                width=640,
+                height=480,
+                channels=1,
+            ),
+            "oak_color_camera": ROS2CameraConfig(
+                topic="/oak/rgb/image_raw",
+                fps=30,
+                width=640,
+                height=480,
+                encoding="rgb8",
+                channels=3,
+            ),
+            "oak_camera_depth": ROS2CameraConfig(
+                topic="/oak/stereo/image_raw",
+                fps=30,
+                width=640,
+                height=480,
+                channels=1,
             ),
         }
     )
