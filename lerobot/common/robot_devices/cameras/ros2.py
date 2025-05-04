@@ -8,25 +8,22 @@ import shutil
 import threading
 import time
 from pathlib import Path
-import time
 from threading import Thread
 
+# TODO(Yadunund): Implement mock.
+import cv2
 import numpy as np
+import rclpy
+from cv_bridge import CvBridge
 from PIL import Image
+from sensor_msgs.msg import Image as ImageMsg
 
 from lerobot.common.robot_devices.cameras.configs import ROS2CameraConfig
 from lerobot.common.robot_devices.utils import (
     RobotDeviceAlreadyConnectedError,
     RobotDeviceNotConnectedError,
-    busy_wait,
 )
 from lerobot.common.utils.utils import capture_timestamp_utc
-
-# TODO(Yadunund): Implement mock.
-import cv2
-from cv_bridge import CvBridge
-from sensor_msgs.msg import Image as ImageMsg
-import rclpy
 
 
 def save_image(img_array, camera_name, frame_index, images_dir):
@@ -47,10 +44,7 @@ def save_images_from_cameras(
     config = ROS2CameraConfig(topic=topic, mock=mock)
     camera = ROS2Camera(config)
     camera.connect()
-    print("Here 0")
-    print(
-        f"ROS2Camera({camera.node.get_name()}"
-    )
+    print(f"ROS2Camera({camera.node.get_name()}")
     cameras.append(camera)
 
     images_dir = Path(images_dir)
@@ -91,39 +85,42 @@ def save_images_from_cameras(
 
 class ROS2Camera:
     """
-    The ROS2Camera class allows to efficiently record images from cameras. It relies on opencv2 to communicate
-    with the cameras. Most cameras are compatible. For more info, see the [Video I/O with OpenCV Overview](https://docs.opencv.org/4.x/d0/da7/videoio_overview.html).
+    The ROS2Camera class records images from cameras via ROS 2.
 
-    An ROS2Camera instance requires a camera index (e.g. `ROS2Camera(node.name=0)`). When you only have one camera
-    like a webcam of a laptop, the camera index is expected to be 0, but it might also be very different, and the camera index
-    might change if you reboot your computer or re-plug your camera. This behavior depends on your operation system.
+    This class requires a ROS 2 camera driver to be running and publishing images on a specified topic.
+    It's compatible with any camera that has a ROS 2 driver, whether running on the same host or another host on the network.
 
-    To find the camera indices of your cameras, you can run our utility script that will be save a few frames for each camera:
+    To discover available camera topics:
     ```bash
-    python lerobot/common/robot_devices/cameras/opencv.py --images-dir outputs/images_from_opencv_cameras
+    # Source your ROS 2 installation first
+    ros2 topic list
     ```
 
-    When an ROS2Camera is instantiated, if no specific config is provided, the default fps, width, height and color_mode
-    of the given camera will be used.
-
-    Example of usage:
+    Basic usage:
     ```python
     from lerobot.common.robot_devices.cameras.configs import ROS2CameraConfig
 
-    config = ROS2CameraConfig(node.name=0)
+    config = ROS2CameraConfig(topic="/camera/image")
     camera = ROS2Camera(config)
     camera.connect()
-    color_image = camera.read()
-    # when done using the camera, consider disconnecting
-    camera.disconnect()
+    image = camera.read()
+    camera.disconnect()  # Clean up when done
     ```
 
-    Example of changing default fps, width, height and color_mode:
+    Configuration notes:
+    - The topic name is required for connection
+    - Other parameters (fps, width, height) should match the actual ROS 2 driver settings
+    - Width and height will be updated from the first received message
+    - Rotation can be applied (90, -90, 180 degrees) if specified in the config
+
     ```python
-    config = ROS2CameraConfig(node.name=0, fps=30, width=1280, height=720)
-    config = ROS2CameraConfig(node.name=0, fps=90, width=640, height=480)
-    config = ROS2CameraConfig(node.name=0, fps=90, width=640, height=480, color_mode="bgr")
-    # Note: might error out open `camera.connect()` if these settings are not compatible with the camera
+    config = ROS2CameraConfig(
+        topic="/camera/image_raw",
+        fps=30,
+        width=640,
+        height=480,
+        rotation=90  # Optional rotation
+    )
     ```
     """
 
@@ -137,9 +134,9 @@ class ROS2Camera:
         self.color_mode = config.color_mode
         self.mock = config.mock
 
-        self.br : CvBridge = CvBridge()
-        self.image_msg : ImageMsg | None = None
-        self.is_connected : bool = False
+        self.br: CvBridge = CvBridge()
+        self.image_msg: ImageMsg | None = None
+        self.is_connected: bool = False
         self.sub = None
         self.logs = {}
         self.node = rclpy.create_node("lerobot_camera_node")
@@ -164,12 +161,7 @@ class ROS2Camera:
         if self.is_connected:
             raise RobotDeviceAlreadyConnectedError(f"ROS2Camera({self.config.topic}) is already connected.")
 
-        self.sub = self.node.create_subscription(
-            ImageMsg,
-            self.config.topic,
-            self.sub_cb,
-            10
-        )
+        self.sub = self.node.create_subscription(ImageMsg, self.config.topic, self.sub_cb, 10)
 
         while self.image_msg is None:
             print(f"Waiting to receive message over {self.config.topic}")
@@ -195,7 +187,6 @@ class ROS2Camera:
                 f"ROS2Camera({self.node.get_name()}) is not connected. Try running `camera.connect()` first."
             )
 
-
         start_time = time.perf_counter()
 
         desired_encoding = "passthrough" if temporary_color is None else temporary_color
@@ -211,14 +202,10 @@ class ROS2Camera:
         # log the utc time at which the image was received
         self.logs["timestamp_utc"] = capture_timestamp_utc()
 
-        print(image.shape)
-        print(image.dtype)
-
         return image
 
-
     def async_read(self):
-      return self.read()
+        return self.read()
 
     def disconnect(self):
         if not self.is_connected:
